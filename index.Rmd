@@ -70,3 +70,4 @@ test <- m %>%
 test
 ```
 
+A recent [USGS OWI blog post](https://owi.usgs.gov/blog/basemaps/) was a great help in working with the basemaps.
