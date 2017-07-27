@@ -1,0 +1,72 @@
+---
+title: "Lake Connectivity Preview"
+output:
+  html_document: default
+  html_notebook: default
+author: Nicole Smith
+date: 2017-07-27
+---
+Allow a couple seconds for the map to render.
+
+This document is for the purposes of demonstrating the lake connectivity classification results. What used to be "LakeConnectivity" is now "Maximum_Lake_Connectivity". The new classification "Permanent_Lake_Connectivity" evaluates the connections if the ephemeral and intermittent StreamRiver flowlines are disqualified as connectors.
+
+* **Ephemeral:** Contains water only during or after a local rainstorm or heavy snowmelt. *FType = 46007*
+* **Intermittent**: Contains water only during or after a local rainstorm or heavy snowmelt. *FType = 46003*
+* **"Permanent" (LAGOS)**: StreamRiver flowlines with no attributes (*FType = 46000*) or with perennial flow (*FType = 46006*).
+```{r echo = FALSE, message = FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+```
+
+```{r echo = FALSE}
+#Standard code to get an NHD basemap in Leaflet
+att <- paste0("<a href='https://www.usgs.gov/'>",
+              "U.S. Geological Survey</a> | ",
+              "<a href='https://www.usgs.gov/laws/policies_notices.html'>",
+              "Policies</a>")
+
+url <- 'https://services.nationalmap.gov/arcgis/services/nhd/MapServer/WMSServer'
+url_cached <- 'https://basemap.nationalmap.gov/arcgis/services/USGSHydroCached/MapServer/WMSServer'
+tile_opt <- WMSTileOptions(format = "image/png", transparent = TRUE)
+ctrl_opt <- layersControlOptions(collapsed = FALSE)
+
+m <- leaflet(width = 1000, height = 700) %>% 
+  setView(lng = -81.3, lat = 41.3, zoom = 11) %>% 
+  addWMSTiles(url, group = 'NHD HR', attribution = att, layers = "1,2,3,4,5,6,9,10,11") %>%
+  addWMSTiles(url, group = 'NHDWaterbody Basemap', attribution = att, options = tile_opt, layers = "7,8") %>%
+  addWMSTiles(url_cached, group = 'USGSHydroCached', attribution = att, options = tile_opt, layers = '0') %>% 
+  addLayersControl(overlayGroups = c('NHD HR', 'NHDWaterbody Basemap', 'USGSHydroCached'), options = ctrl_opt) %>%
+  hideGroup('USGSHydroCached')
+```
+
+```{r echo = FALSE, results = 'hide'}
+# Add the polygons
+lcc_0411 <- st_read('./shapefiles/LCC_intermittent_1ha_0411.shp') %>% 
+  st_transform(4326) %>% 
+  st_zm() %>%
+  mutate(max_perm = factor(paste(Maximum_La, Permanent1, sep = '-')))
+lcc_1503 <- st_read('./shapefiles/LCC_ephemeral_1ha_1503.shp') %>% 
+  st_transform(4326) %>% 
+  st_zm() %>%
+  mutate(max_perm = factor(paste(Maximum_La, Permanent1, sep = '-')))
+
+# Levels came in with the order I want somehow. Not sure how but lucky me!
+# Use 1503 because it has more of the possibilities
+colors = c("grey20", "mediumorchid4", "mediumorchid1", "red", "grey35", "green4", "green2", "grey55", "lightsalmon1", "grey75")
+cpal <- colorFactor(colors, lcc_1503$max_perm, levels = levels(lcc_1503))
+
+popup_template <- "<b>NHD Permanent Identifier:</b><br/>%s<br/><b>Max Connectivity:</b><br/>%s<br/><b>Permanent Connectivity:</b><br/>%s"
+```
+
+There are two distant subregions with data in this map: 0411 (Ohio, initial view) and 1503 (Arizona). While the Ohio subregion contains many intermittent headwaters, the Arizona subregion demonstrates the pattern of lakes that are only rarely connected. Colorful lakes indicate a class change, while grey lakes are classified the same either way. The 2 red lakes are a bug I still have to bust.
+```{r echo = FALSE}
+test <- m %>% 
+  addPolygons(data = lcc_1503, weight = 3, opacity = 1, color = ~cpal(max_perm), fillColor = ~cpal(max_perm), fillOpacity = .9,
+              popup = ~sprintf(popup_template, Permanent_, Maximum_La, Permanent1)) %>% 
+  addLegend("bottomright", pal = cpal, values = levels(lcc_1503$max_perm), title = "Max Class-Perm Class", opacity = .9) %>%
+  addPolygons(data = lcc_0411, weight = 3, opacity = 1, color = ~cpal(max_perm), fillColor = ~cpal(max_perm), fillOpacity = .9,
+              popup = ~sprintf(popup_template, Permanent_, Maximum_La, Permanent1))
+test
+```
+
