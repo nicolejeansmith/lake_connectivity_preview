@@ -8,10 +8,10 @@ date: 2017-07-27
 ---
 Allow a couple seconds for the map to render.
 
-This document is for the purposes of demonstrating the lake connectivity classification results. What used to be "LakeConnectivity" is now "Maximum_Lake_Connectivity". The new classification "Permanent_Lake_Connectivity" evaluates the connections if the ephemeral and intermittent StreamRiver flowlines are disqualified as connectors.
+This document is for the purposes of demonstrating the lake connectivity classification results. What used to be "LakeConnectivity" remains "LakeConnectivity" and includes ALL flowlines in the connection analysis. The new classification "LakeConnectivity_Permanent" evaluates the connections if the ephemeral and intermittent StreamRiver flowlines are disqualified as connections (i.e., are filtered out before the analysis). Both classes will be available as separate columns in the output.
 
 * **Ephemeral:** Contains water only during or after a local rainstorm or heavy snowmelt. *FType = 46007*
-* **Intermittent**: Contains water only during or after a local rainstorm or heavy snowmelt. *FType = 46003*
+* **Intermittent**: Contains water for only part of the year, but more than just after rainstorms and at snowmelt. *FType = 46003*
 * **"Permanent" (LAGOS)**: StreamRiver flowlines with no attributes (*FType = 46000*) or with perennial flow (*FType = 46006*).
 ```{r echo = FALSE, message = FALSE}
 library(tidyverse)
@@ -56,7 +56,7 @@ lcc_1503 <- st_read('./shapefiles/LCC_ephemeral_1ha_1503.shp') %>%
 colors = c("grey20", "mediumorchid4", "mediumorchid1", "red", "grey35", "green4", "green2", "grey55", "lightsalmon1", "grey75")
 cpal <- colorFactor(colors, lcc_1503$max_perm, levels = levels(lcc_1503))
 
-popup_template <- "<b>NHD Permanent Identifier:</b><br/>%s<br/><b>Max Connectivity:</b><br/>%s<br/><b>Permanent Connectivity:</b><br/>%s"
+popup_template <- "<b>NHD Permanent Identifier:</b><br/>%s<br/><b>Lake Connectivity:</b><br/>%s<br/><b>Lake Connectivity, permanent connections only:</b><br/>%s"
 ```
 
 There are two distant subregions with data in this map: 0411 (Ohio, initial view) and 1503 (Arizona). While the Ohio subregion contains many intermittent headwaters, the Arizona subregion demonstrates the pattern of lakes that are only rarely connected. Colorful lakes indicate a class change, while grey lakes are classified the same either way. The 2 red lakes are a bug I still have to bust.
